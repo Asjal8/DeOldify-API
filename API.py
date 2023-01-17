@@ -13,7 +13,11 @@ from deoldify.device_id import DeviceId
 from deoldify.visualize import *
 from deoldify.visualize import VideoColorizer
 
+
 matplotlib.use('Agg')
+import os, shutil
+import glob
+
 
 # choices:  CPU, GPU0...GPU7
 device.set(device=DeviceId.GPU0)
@@ -30,44 +34,42 @@ app = Flask(__name__)
 
 @app.route('/uploadImgArtistic', methods=['POST'])
 def myServerCall():
+    # choices:  CPU, GPU0...GPU7
+    device.set(device=DeviceId.GPU0)
+
     colorizer = get_image_colorizer(artistic=True)
 
     # these 2 parameters we receive from frontend
-    myImg = request.files['img']
+    img = request.files['img']
 
-    filename = myImg.filename
+    factor = int(request.form['factor'])
 
-    print("source img 1 = ", myImg)
+    img_name = img.filename
 
-    myImg.save("./test_images/" + filename)
-    source_image = "./test_images/" + filename
-    myImg_path = source_image
+    print("source img 1 = ", img_name)
+
+    img_path = "./test_images/" + img_name
+
+    img.save(img_path)
 
     # NOTE:  Max is 45 with 11GB video cards. 35 is a good default
-    render_factor = 19
+    render_factor = factor
     # NOTE:  Make source_url None to just read from file at ./video/source/[file_name] directly without modification
-    source_url = None
-    source_path = 'test_images/image.png'
-    result_path = 'result_images'
+    result_path = colorizer.plot_transformed_image(path=img_path, render_factor=render_factor, compare=True)
 
-    if source_url is not None:
-        result_path = colorizer.plot_transformed_image_from_url(url=source_url, path=source_path,
-                                                                render_factor=render_factor, compare=True)
-    else:
-        result_path = colorizer.plot_transformed_image(path=source_path, render_factor=render_factor, compare=True)
+    output_img_path = "./result_images/" + img_name
 
-    # show_image_in_notebook(result_path)
-
-    with open("result_images/image.png", "rb") as img_file:
+    with open(output_img_path, "rb") as img_file:
         myStr = base64.b64encode(img_file.read()).decode('utf-8')
 
-    os.remove(myImg_path)
-    # os.remove("ConvertedImages/result.mp4")
+    os.remove(img_path)
+    # os.remove(output_img_path)S
 
     return jsonify({
-        "responseVideo": myStr,
+        "responseImage": myStr,
         "myServerMessage": "Image converted",
     })
+
 
 
 # Image Colorizer Stable
@@ -80,39 +82,33 @@ def myServer2Call():
     colorizer = get_image_colorizer(artistic=False)
 
     # these 2 parameters we receive from frontend
-    myImg = request.files['img']
+    img = request.files['img']
 
-    filename = myImg.filename
+    factor = int(request.form['factor'])
 
-    print("source img 1 = ", myImg)
+    img_name = img.filename
 
-    myImg.save("./test_images/" + filename)
-    source_image = "./test_images/" + filename
-    myImg_path = source_image
+    print("source img 1 = ", img_name)
+
+    img_path = "./test_images/" + img_name
+
+    img.save(img_path)
 
     # NOTE:  Max is 45 with 11GB video cards. 35 is a good default
-    render_factor = 19
+    render_factor = factor
     # NOTE:  Make source_url None to just read from file at ./video/source/[file_name] directly without modification
-    source_url = None
-    source_path = 'test_images/image.png'
-    result_path = 'result_images'
+    result_path = colorizer.plot_transformed_image(path=img_path, render_factor=render_factor, compare=True)
 
-    if source_url is not None:
-        result_path = colorizer.plot_transformed_image_from_url(url=source_url, path=source_path,
-                                                                render_factor=render_factor, compare=True)
-    else:
-        result_path = colorizer.plot_transformed_image(path=source_path, render_factor=render_factor, compare=True)
+    output_img_path = "./result_images/" + img_name
 
-    # show_image_in_notebook(result_path)
-
-    with open("result_images/image.png", "rb") as img_file:
+    with open(output_img_path, "rb") as img_file:
         myStr = base64.b64encode(img_file.read()).decode('utf-8')
 
-    os.remove(myImg_path)
-    # os.remove("ConvertedImages/result.mp4")
+    os.remove(img_path)
+    # os.remove(output_img_path)
 
     return jsonify({
-        "responseVideo": myStr,
+        "responseImage": myStr,
         "myServerMessage": "Image converted",
     })
 
@@ -120,58 +116,50 @@ def myServer2Call():
 # Video Colorizer
 
 @app.route('/uploadVideo', methods=['POST'])
-def myServer3Call(video_file=None):
+def myServer3Call():
     # choices:  CPU, GPU0...GPU7
     device.set(device=DeviceId.GPU0)
 
-    warnings.filterwarnings("ignore", category=UserWarning,
-                            message=".*?Your .*? set is empty.*?")
-
     # these 2 parameters we receive from frontend
-    myVideo = request.files['video']
+    video = request.files['video']
+    factor = int(request.form['factor'])
 
-    filename = myVideo.filename
+    video_name = video.filename
 
-    print("source video 1 = ", myVideo)
+    print("source video 1 = ", video_name)
 
-    myVideo.save("./video/source/" + filename)
-    source_video = "./video/source/" + filename
-    myImg_path = source_video
+    video_path = "./video/source/" + video_name
+    video.save(video_path)
 
     colorizer: VideoColorizer = get_video_colorizer()
 
     # NOTE:  Max is 44 with 11GB video cards.  21 is a good default
-    render_factor = 19
-    # NOTE:  Make source_url None to just read from file at ./video/source/[file_name] directly without modification
-    source_url = None
-    file_name = 'GIF'
-    file_name_ext = file_name + '.mp4'
-    result_path = 'result_video'
+    render_factor = factor
 
-    if source_url is not None:
-        result_path = colorizer.colorize_from_url(source_url, file_name_ext,
-                                                  render_factor=render_factor)
-    else:
-        result_path = colorizer.colorize_from_file_name(file_name_ext,
-                                                        render_factor=render_factor)
+    result_path = colorizer.colorize_from_file_name(video_path,
+                                                    render_factor=render_factor)
 
     show_video_in_notebook(result_path)
 
-    for i in range(10, 45, 2):
-        colorizer.vis.plot_transformed_image('video/bwframes/' + file_name + '/00001.jpg',
-                                             render_factor=i,
-                                             display_render_factor=True, figsize=(8, 8))
+    # for i in range(10, 45, 2):
+    #     colorizer.vis.plot_transformed_image('video/bwframes/' + file_name + '/00001.jpg',
+    #                                         render_factor=i,
+    #                                        display_render_factor=True, figsize=(8, 8))
 
-    with open("./video/result", "rb") as video_file:
+    output_video_path = "./video/result/" + video_name
+
+    with open(output_video_path, "rb") as video_file:
         myStr = base64.b64encode(video_file.read()).decode('utf-8')
 
-    os.remove(myImg_path)
+    os.remove(video_path)
     # os.remove("ConvertedImages/result.mp4")
 
     return jsonify({
         "responseVideo": myStr,
-        "myServerMessage": "Image converted",
+        "myServerMessage": "Video converted",
     })
+
+
 
 
 if __name__ == '__main__':

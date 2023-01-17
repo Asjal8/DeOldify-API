@@ -211,12 +211,12 @@ class ModelImageVisualizer:
 class VideoColorizer:
     def __init__(self, vis: ModelImageVisualizer):
         self.vis = vis
-        workfolder = Path('./video')
-        self.source_folder = workfolder / "source"
-        self.bwframes_root = workfolder / "bwframes"
-        self.audio_root = workfolder / "audio"
-        self.colorframes_root = workfolder / "colorframes"
-        self.result_folder = workfolder / "result"
+        workfolder = Path('')
+        self.source_folder = workfolder
+        self.bwframes_root = workfolder / "./video/bwframes/"
+        self.audio_root = workfolder / "./video/audio/"
+        self.colorframes_root = workfolder / "./video/colorframes/"
+        self.result_folder = workfolder / "./video/result/"
 
     def _purge_images(self, dir):
         for f in os.listdir(dir):
